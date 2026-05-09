@@ -2084,43 +2084,77 @@
         const doc = new jsPDF('p', 'mm', 'a4');
         const currency = settings[activeStore].currency;
         const storeName = storeNames[activeStore];
+
+        // Header
         doc.setFontSize(18);
         doc.text(`Rapport financier - ${storeName}`, 14, 20);
         doc.setFontSize(10);
         doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, 28);
-        let y = 35;
-        if (reportType === 'financial_summary') {
-            doc.setFontSize(12);
-            doc.text('Résumé par catégorie', 14, y);
-            y += 8;
-            const summary = {};
-            transactionsList.forEach(t => {
-                if (!summary[t.category]) summary[t.category] = { income: 0, expense: 0 };
-                if (t.type === 'income') summary[t.category].income += t.amount;
-                else summary[t.category].expense += t.amount;
-            });
-            const tableData = Object.entries(summary).map(([cat, val]) => [cat, `${currency}${val.income.toFixed(2)}`, `${currency}${val.expense.toFixed(2)}`, `${currency}${(val.income - val.expense).toFixed(2)}`]);
-            doc.autoTable({ startY: y, head: [['Catégorie', 'Revenus', 'Dépenses', 'Solde']], body: tableData, theme: 'striped', styles: { fontSize: 10 } });
-        } else if (reportType === 'tax') {
+        doc.text(`Nombre de transactions : ${transactionsList.length}`, 14, 33);
+        let y = 40;
+
+        // Build category summary (used in all report types)
+        const summary = {};
+        let totalIncome = 0, totalExpense = 0;
+        transactionsList.forEach(t => {
+            if (!summary[t.category]) summary[t.category] = { income: 0, expense: 0 };
+            if (t.type === 'income') { summary[t.category].income += t.amount; totalIncome += t.amount; }
+            else                     { summary[t.category].expense += t.amount; totalExpense += t.amount; }
+        });
+        const summaryRows = Object.entries(summary).map(([cat, val]) => [
+            translateCategory(cat),
+            `${currency}${val.income.toFixed(2)}`,
+            `${currency}${val.expense.toFixed(2)}`,
+            `${currency}${(val.income - val.expense).toFixed(2)}`
+        ]);
+        summaryRows.push(['TOTAL GÉNÉRAL',
+            `${currency}${totalIncome.toFixed(2)}`,
+            `${currency}${totalExpense.toFixed(2)}`,
+            `${currency}${(totalIncome - totalExpense).toFixed(2)}`
+        ]);
+
+        if (reportType === 'tax') {
             const taxRate = settings[activeStore].taxRate / 100;
-            let totalIncome = 0, totalExpense = 0;
-            transactionsList.forEach(t => {
-                if (t.type === 'income') totalIncome += t.amount;
-                else totalExpense += t.amount;
-            });
             const taxable = totalIncome - totalExpense;
             const tax = taxable * taxRate;
-            const net = taxable - tax;
             doc.setFontSize(11);
             doc.text(`Total des revenus : ${currency}${totalIncome.toFixed(2)}`, 14, y);
             doc.text(`Total des dépenses : ${currency}${totalExpense.toFixed(2)}`, 14, y+6);
             doc.text(`Base taxable : ${currency}${taxable.toFixed(2)}`, 14, y+12);
             doc.text(`Impôt (${settings[activeStore].taxRate}%) : ${currency}${tax.toFixed(2)}`, 14, y+18);
-            doc.text(`Net après impôt : ${currency}${net.toFixed(2)}`, 14, y+24);
-        } else {
-            const tableData = transactionsList.map(t => [formatDate(t.date), t.type === 'income' ? 'Revenu' : 'Dépense', translateCategory(t.category), t.description, `${currency}${t.amount.toFixed(2)}`]);
+            doc.text(`Net après impôt : ${currency}${(taxable - tax).toFixed(2)}`, 14, y+24);
+            y += 34;
+        } else if (reportType === 'transactions') {
+            // Detailed transaction list first
+            const tableData = transactionsList.map(t => [
+                formatDate(t.date),
+                t.type === 'income' ? 'Revenu' : 'Dépense',
+                translateCategory(t.category),
+                t.description,
+                `${currency}${t.amount.toFixed(2)}`
+            ]);
             doc.autoTable({ startY: y, head: [['Date', 'Type', 'Catégorie', 'Description', 'Montant']], body: tableData, theme: 'striped', styles: { fontSize: 9 }, columnStyles: { 3: { cellWidth: 50 } } });
+            y = doc.lastAutoTable.finalY + 10;
         }
+
+        // Summary table — always shown
+        doc.setFontSize(12);
+        doc.text('Résumé par catégorie', 14, y);
+        y += 5;
+        doc.autoTable({
+            startY: y,
+            head: [['Catégorie', 'Revenus', 'Dépenses', 'Solde']],
+            body: summaryRows,
+            theme: 'striped',
+            styles: { fontSize: 10 },
+            didParseCell: (data) => {
+                if (data.row.index === summaryRows.length - 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.fillColor = [220, 230, 255];
+                }
+            }
+        });
+
         doc.save(`rapport_${activeStore}_${new Date().toISOString().slice(0,10)}.pdf`);
         if (!silent) alert('Rapport PDF généré.');
     }
