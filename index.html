@@ -1379,6 +1379,10 @@
         ['reportDay','reportMonth','reportYear'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => { captureReportFilters(); applyReportFilters(); });
         });
+        ['dataDay','dataMonth','dataYear'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => { captureDataFilters(); applyDataFilters(); });
+        });
         
         const today = new Date();
         const yyyy = today.getFullYear();
