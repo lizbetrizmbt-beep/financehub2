@@ -309,10 +309,13 @@
                         </div>
                         <div class="card mb-4">
                             <div class="card-header py-3 bg-white">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 class="m-0 fw-bold text-primary"><i class="fas fa-list me-2"></i><span data-i18n="trans_history">Historique</span></h6>
-                                    <input type="text" class="form-control form-control-sm" id="searchTransactions" placeholder="Rechercher par description..." data-i18n-ph="trans_search" style="width:240px;">
+                                <h6 class="m-0 fw-bold text-primary mb-3"><i class="fas fa-list me-2"></i><span data-i18n="trans_history">Historique</span></h6>
+                                <div class="input-group mb-2" style="max-width:100%;">
+                                    <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control form-control-lg" id="searchTransactions" placeholder="Rechercher par description ou catégorie..." data-i18n-ph="trans_search" style="font-size:1rem;">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('searchTransactions').value=''; captureTransFilters(); applyTransactionsFilters();" title="Effacer"><i class="fas fa-times"></i></button>
                                 </div>
+                                <div id="searchResultCount" class="text-muted small mb-2" style="display:none;"></div>
                                 <div class="d-flex gap-2 flex-wrap">
                                     <select class="form-select form-select-sm" id="filterDay">
                                         <option value="">Jour</option>
@@ -1376,6 +1379,7 @@
         ['filterDay','filterMonth','filterYear'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => { captureTransFilters(); applyTransactionsFilters(); });
         });
+        document.getElementById('searchTransactions').addEventListener('input', () => { captureTransFilters(); applyTransactionsFilters(); });
         ['reportDay','reportMonth','reportYear'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => { captureReportFilters(); applyReportFilters(); });
         });
@@ -1645,6 +1649,16 @@
         const query = (document.getElementById('searchTransactions')?.value || '').toLowerCase();
         let filtered = filterTransactions(transactions[activeStore], transFilters.day, transFilters.month, transFilters.year);
         if (query) filtered = filtered.filter(t => (t.description || '').toLowerCase().includes(query) || translateCategory(t.category).toLowerCase().includes(query));
+        const countEl = document.getElementById('searchResultCount');
+        if (countEl) {
+            const total = transactions[activeStore].length;
+            if (query || transFilters.day || transFilters.month || transFilters.year) {
+                countEl.style.display = 'block';
+                countEl.innerHTML = `<i class="fas fa-filter me-1"></i><strong>${filtered.length}</strong> résultat${filtered.length !== 1 ? 's' : ''} sur ${total} transaction${total !== 1 ? 's' : ''}`;
+            } else {
+                countEl.style.display = 'none';
+            }
+        }
         const tbody = document.querySelector('#allTransactions tbody');
         tbody.innerHTML = '';
         filtered.sort((a,b)=>new Date(b.date+'T12:00:00')-new Date(a.date+'T12:00:00'));
@@ -1653,7 +1667,11 @@
             const row = tbody.insertRow();
             row.insertCell(0).textContent = formatDate(t.date);
             const descCell = row.insertCell(1);
-            descCell.innerHTML = t.description + (t.recurring ? ' <span class="badge bg-info text-white ms-1" title="Récurrente"><i class="fas fa-sync-alt"></i></span>' : '');
+            const descText = t.description || '';
+            const highlighted = query && descText.toLowerCase().includes(query)
+                ? descText.replace(new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'), '<mark>$1</mark>')
+                : descText;
+            descCell.innerHTML = highlighted + (t.recurring ? ' <span class="badge bg-info text-white ms-1" title="Récurrente"><i class="fas fa-sync-alt"></i></span>' : '');
             row.insertCell(2).textContent = translateCategory(t.category);
             row.insertCell(3).textContent = translateType(t.type);
             const amt = row.insertCell(4);
