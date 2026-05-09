@@ -2203,6 +2203,18 @@
             }
         });
 
+        // Prominent total block at the very end
+        const finalY = doc.lastAutoTable.finalY + 8;
+        doc.setFillColor(41, 128, 185);
+        doc.rect(14, finalY, 182, 14, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text(`TOTAL : ${transactionsList.length} transaction${transactionsList.length > 1 ? 's' : ''}`, 18, finalY + 6);
+        doc.text(`Revenus ${currency}${totalIncome.toFixed(2)}  |  Dépenses ${currency}${totalExpense.toFixed(2)}  |  Net ${currency}${(totalIncome - totalExpense).toFixed(2)}`, 18, finalY + 11);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont(undefined, 'normal');
+
         doc.save(`rapport_${activeStore}_${new Date().toISOString().slice(0,10)}.pdf`);
         if (!silent) alert('Rapport PDF généré.');
     }
