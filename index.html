@@ -2367,19 +2367,7 @@
         if (bar) { bar.style.width = `${usage}%`; bar.setAttribute('aria-valuenow', usage); }
     }
     function generateSampleIfEmpty() {
-        // Ne pas générer de données d'exemple pour Petits Beautes (données réelles déjà chargées)
-        if (activeStore === 'petits') return;
-        if (transactions[activeStore].length === 0) {
-            const currentYear = new Date().getFullYear();
-            transactions[activeStore] = [
-                { id: Date.now().toString(36)+'1', date: `${currentYear}-03-01`, type: 'income', category: 'sales', amount: 1250, description: 'Ventes mars' },
-                { id: Date.now().toString(36)+'2', date: `${currentYear}-03-05`, type: 'expense', category: 'shopify', amount: 29, description: 'Abonnement Shopify' },
-                { id: Date.now().toString(36)+'3', date: `${currentYear}-03-10`, type: 'expense', category: 'facebook', amount: 150, description: 'Pub Facebook' },
-                { id: Date.now().toString(36)+'4', date: `${currentYear}-03-15`, type: 'income', category: 'sales', amount: 980, description: 'Ventes supplémentaires' },
-                { id: Date.now().toString(36)+'5', date: `${currentYear}-03-20`, type: 'expense', category: 'shipping', amount: 75, description: 'Frais d\'expédition' }
-            ];
-            saveAllData();
-        }
+        // No generar datos de muestra — el usuario tiene datos reales en Firebase
     }
     function saveCompanySettings(e) { e.preventDefault(); settings[activeStore].companyName = document.getElementById('companyName').value; settings[activeStore].currency = document.getElementById('currency').value; settings[activeStore].taxRate = parseFloat(document.getElementById('taxRate').value) || 0; settings[activeStore].accentColor = document.getElementById('accentColor').value; saveAllData(); updateUI(); updateSidebarBrand(); alert('Paramètres enregistrés.'); }
     function saveLanguageCurrency() { settings[activeStore].language = document.getElementById('language').value; settings[activeStore].dateFormat = document.getElementById('dateFormat').value; saveAllData(); updateUI(); alert('Langue enregistrée.'); changeLanguage(); }
