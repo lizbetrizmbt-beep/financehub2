@@ -2087,7 +2087,8 @@
         }).then(() => {
             sendBtn.disabled = false;
             sendBtn.textContent = 'Envoyer';
-            bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
+            const modalInst = bootstrap.Modal.getInstance(document.getElementById('emailModal'));
+            if (modalInst) modalInst.hide();
             alert(`✅ Email envoyé à ${email} !\nLe fichier a aussi été téléchargé localement.`);
         }).catch((err) => {
             sendBtn.disabled = false;
@@ -2359,14 +2360,6 @@
         if (el) el.value = settings[activeStore].memo || '';
     }
 
-    function translateCategory(key) {
-        const cat = customCategories.find(c => c.key === key);
-        return cat ? cat.label : key;
-    }
-    function translateType(key) {
-        const t = customTypes.find(t => t.key === key);
-        return t ? t.label : key;
-    }
     function updateDataStatistics() {
         const totalSize = JSON.stringify(transactions[activeStore]).length / 1024;
         const usage = Math.min(100, (totalSize / 5000) * 100);
