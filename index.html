@@ -2369,7 +2369,7 @@
     function generateSampleIfEmpty() {
         // No generar datos de muestra — el usuario tiene datos reales en Firebase
     }
-    function saveCompanySettings(e) { e.preventDefault(); settings[activeStore].companyName = document.getElementById('companyName').value; settings[activeStore].currency = document.getElementById('currency').value; settings[activeStore].taxRate = parseFloat(document.getElementById('taxRate').value) || 0; settings[activeStore].accentColor = document.getElementById('accentColor').value; saveAllData(); updateUI(); updateSidebarBrand(); alert('Paramètres enregistrés.'); }
+    function saveCompanySettings(e) { e.preventDefault(); settings[activeStore].companyName = document.getElementById('companyName').value; settings[activeStore].currency = document.getElementById('currency').value; settings[activeStore].taxRate = parseFloat(document.getElementById('taxRate').value) || 0; settings[activeStore].accentColor = document.getElementById('accentColor').value; saveAllData(); updateUI(); updateSidebarBrand(); applyDashboardFilters(); applyTransactionsFilters(); applyDataFilters(); applyReportFilters(); alert('Paramètres enregistrés.'); }
     function saveLanguageCurrency() { settings[activeStore].language = document.getElementById('language').value; settings[activeStore].dateFormat = document.getElementById('dateFormat').value; saveAllData(); updateUI(); alert('Langue enregistrée.'); changeLanguage(); }
     function togglePwd(fieldId, btn) {
         const input = document.getElementById(fieldId);
