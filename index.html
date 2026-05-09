@@ -389,6 +389,18 @@
                                                 <option value="tax">Rapport fiscal (simulation)</option>
                                             </select>
                                         </div>
+                                        <div class="mb-3"><label class="form-label"><i class="fas fa-filter me-1 text-primary"></i>Filtrer par type de transaction</label>
+                                            <select class="form-select" id="reportTypeFilter">
+                                                <option value="">Tous (revenus + dépenses)</option>
+                                                <option value="income">💰 Revenus seulement</option>
+                                                <option value="expense">💸 Dépenses seulement</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3"><label class="form-label"><i class="fas fa-tag me-1 text-primary"></i>Filtrer par catégorie</label>
+                                            <select class="form-select" id="reportCategoryFilter">
+                                                <option value="">Toutes les catégories</option>
+                                            </select>
+                                        </div>
                                         <div class="mb-3"><label class="form-label">Format</label>
                                             <select class="form-select" id="reportFormat">
                                                 <option value="csv">Excel (CSV)</option>
@@ -1144,6 +1156,7 @@
         document.getElementById('importJSONFile')?.addEventListener('change', importFullJSON);
         rebuildTypeSelect();
         rebuildCategorySelect();
+        rebuildReportCategoryFilter();
         refreshAllTypesCategoriesUI();
         updateUI();
         loadMemo();
@@ -1383,6 +1396,8 @@
         ['reportDay','reportMonth','reportYear'].forEach(id => {
             document.getElementById(id).addEventListener('change', () => { captureReportFilters(); applyReportFilters(); });
         });
+        document.getElementById('reportTypeFilter').addEventListener('change', () => { rebuildReportCategoryFilter(); applyReportFilters(); });
+        document.getElementById('reportCategoryFilter').addEventListener('change', () => { applyReportFilters(); });
         ['dataDay','dataMonth','dataYear'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => { captureDataFilters(); applyDataFilters(); });
@@ -1399,6 +1414,7 @@
         activeStore = document.getElementById('storeSelector').value;
         localStorage.setItem('activeStore', activeStore);
         updateUI();
+        rebuildReportCategoryFilter();
         applyDashboardFilters();
         applyTransactionsFilters();
         applyDataFilters();
@@ -1706,7 +1722,28 @@
     }
 
     function getReportFilteredTransactions() {
-        return filterTransactions(transactions[activeStore], reportFilters.day, reportFilters.month, reportFilters.year);
+        let filtered = filterTransactions(transactions[activeStore], reportFilters.day, reportFilters.month, reportFilters.year);
+        const typeFilter = document.getElementById('reportTypeFilter')?.value;
+        const catFilter  = document.getElementById('reportCategoryFilter')?.value;
+        if (typeFilter) filtered = filtered.filter(t => t.type === typeFilter);
+        if (catFilter)  filtered = filtered.filter(t => t.category === catFilter);
+        return filtered;
+    }
+
+    function rebuildReportCategoryFilter() {
+        const sel = document.getElementById('reportCategoryFilter');
+        if (!sel) return;
+        const typeFilter = document.getElementById('reportTypeFilter')?.value;
+        const prev = sel.value;
+        sel.innerHTML = '<option value="">Toutes les catégories</option>';
+        const cats = typeFilter ? customCategories.filter(c => c.type === typeFilter) : customCategories;
+        cats.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.key;
+            opt.textContent = c.label;
+            sel.appendChild(opt);
+        });
+        if (prev && cats.find(c => c.key === prev)) sel.value = prev;
     }
 
     // GESTION TRANSACTIONS
