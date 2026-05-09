@@ -315,6 +315,12 @@
                                     <input type="text" class="form-control form-control-lg" id="searchTransactions" placeholder="Rechercher par description ou catégorie..." data-i18n-ph="trans_search" style="font-size:1rem;">
                                     <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('searchTransactions').value=''; captureTransFilters(); applyTransactionsFilters();" title="Effacer"><i class="fas fa-times"></i></button>
                                 </div>
+                                <div id="transFilterSummary" class="row g-2 mb-2" style="display:none;">
+                                    <div class="col-6 col-sm-3"><div class="rounded p-2 text-center" style="background:#e8f4fd;"><div class="small text-muted">Transactions</div><div class="fw-bold text-primary" id="sumCount">0</div></div></div>
+                                    <div class="col-6 col-sm-3"><div class="rounded p-2 text-center" style="background:#e6f9f0;"><div class="small text-muted">Revenus</div><div class="fw-bold text-success" id="sumIncome">$0.00</div></div></div>
+                                    <div class="col-6 col-sm-3"><div class="rounded p-2 text-center" style="background:#fdecea;"><div class="small text-muted">Dépenses</div><div class="fw-bold text-danger" id="sumExpense">$0.00</div></div></div>
+                                    <div class="col-6 col-sm-3"><div class="rounded p-2 text-center" style="background:#fff8e1;"><div class="small text-muted">Bénéfice net</div><div class="fw-bold" id="sumNet">$0.00</div></div></div>
+                                </div>
                                 <div id="searchResultCount" class="text-muted small mb-2" style="display:none;"></div>
                                 <div class="d-flex gap-2 flex-wrap">
                                     <select class="form-select form-select-sm" id="filterDay">
@@ -1665,6 +1671,21 @@
         const query = (document.getElementById('searchTransactions')?.value || '').toLowerCase();
         let filtered = filterTransactions(transactions[activeStore], transFilters.day, transFilters.month, transFilters.year);
         if (query) filtered = filtered.filter(t => (t.description || '').toLowerCase().includes(query) || translateCategory(t.category).toLowerCase().includes(query));
+        // Summary panel — always visible
+        const cur = settings[activeStore].currency;
+        const sumIncome  = filtered.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+        const sumExpense = filtered.filter(t => t.type !== 'income').reduce((s,t) => s+t.amount, 0);
+        const sumNet     = sumIncome - sumExpense;
+        const summaryEl = document.getElementById('transFilterSummary');
+        if (summaryEl) {
+            summaryEl.style.display = filtered.length > 0 ? '' : 'none';
+            document.getElementById('sumCount').textContent   = filtered.length;
+            document.getElementById('sumIncome').textContent  = `${cur}${sumIncome.toFixed(2)}`;
+            document.getElementById('sumExpense').textContent = `${cur}${sumExpense.toFixed(2)}`;
+            const netEl = document.getElementById('sumNet');
+            netEl.textContent = `${sumNet >= 0 ? '+' : ''}${cur}${sumNet.toFixed(2)}`;
+            netEl.style.color = sumNet >= 0 ? '#1cc88a' : '#e74a3b';
+        }
         const countEl = document.getElementById('searchResultCount');
         if (countEl) {
             const total = transactions[activeStore].length;
@@ -1678,7 +1699,6 @@
         const tbody = document.querySelector('#allTransactions tbody');
         tbody.innerHTML = '';
         filtered.sort((a,b)=>new Date(b.date+'T12:00:00')-new Date(a.date+'T12:00:00'));
-        const cur = settings[activeStore].currency;
         filtered.forEach(t => {
             const row = tbody.insertRow();
             row.insertCell(0).textContent = formatDate(t.date);
