@@ -2945,12 +2945,25 @@
             badge.style.display = 'flex';
             // Cambiar ruta de datos a /users/{uid}
             window._firebaseUserPath = 'users/' + user.uid;
+
+            function mergeTransactionsFromRemote(remote) {
+                if (!remote) return;
+                Object.keys(remote).forEach(store => {
+                    const remoteArr = remote[store] || [];
+                    const localArr  = transactions[store] || [];
+                    const byId = {};
+                    localArr.forEach(t => { byId[t.id] = t; });
+                    remoteArr.forEach(t => { if (!byId[t.id]) byId[t.id] = t; });
+                    transactions[store] = Object.values(byId).sort((a, b) => b.date.localeCompare(a.date));
+                });
+            }
+
             // Cargar datos del usuario desde Firebase si existen
             _fbDb2.ref(window._firebaseUserPath).once('value').then(snap => {
                 const data = snap.val();
                 if (data && data.transactions) {
                     isSyncingFromRemote = true;
-                    if (data.transactions)   Object.assign(transactions, data.transactions);
+                    mergeTransactionsFromRemote(data.transactions);
                     if (data.settings)       Object.assign(settings, data.settings);
                     if (data.storeNames)     Object.assign(storeNames, data.storeNames);
                     if (data.customTypes)    customTypes = data.customTypes;
@@ -2966,7 +2979,7 @@
                     if (!d || isSyncingFromRemote) return;
                     if (d.updatedAt && d.updatedAt > (window._lastLocalSave || 0)) {
                         isSyncingFromRemote = true;
-                        if (d.transactions)   Object.assign(transactions, d.transactions);
+                        mergeTransactionsFromRemote(d.transactions);
                         if (d.settings)       Object.assign(settings, d.settings);
                         if (d.storeNames)     Object.assign(storeNames, d.storeNames);
                         if (d.customTypes)    customTypes = d.customTypes;
@@ -2993,7 +3006,7 @@
         }
     });
 
-</script><div id="syncToast" class="sync-toast" style="background: rgb(231, 74, 59); color: rgb(255, 255, 255); display: none;">Erreur de connexion: Cannot set properties of null (setting 'innerHTML')</div>
+</script>
 
 <!-- Sync Toast -->
 <div id="syncToast" class="sync-toast"></div>
