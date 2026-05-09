@@ -384,8 +384,6 @@
                                                     <option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
                                                 </select>
                                                 <select id="reportYear" class="form-select" style="width:auto;"><option value="">Toutes les années</option><option value="2031">2031 (futur)</option><option value="2030">2030 (futur)</option><option value="2029">2029 (futur)</option><option value="2028">2028 (futur)</option><option value="2027">2027 (futur)</option><option value="2026" style="font-weight:bold;">2026 (actuel)</option><option value="2025">2025</option><option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option><option value="2021">2021</option><option value="2020">2020</option><option value="2019">2019</option><option value="2018">2018</option><option value="2017">2017</option><option value="2016">2016</option><option value="2015">2015</option></select>
-                                                <button class="btn btn-sm btn-primary" id="applyReportFilters">Appliquer</button>
-                                                <button class="btn btn-sm btn-secondary" id="resetReportFilters">Réinitialiser</button>
                                             </div>
                                         </div>
                                         <div class="mb-3"><label class="form-label">Type de rapport</label>
@@ -412,6 +410,16 @@
                                                 <option value="csv">Excel (CSV)</option>
                                                 <option value="pdf">PDF</option>
                                             </select>
+                                        </div>
+                                        <div class="d-flex gap-2 mb-3">
+                                            <button class="btn btn-primary" id="applyReportFilters"><i class="fas fa-check me-1"></i>Appliquer</button>
+                                            <button class="btn btn-secondary" id="resetReportFilters"><i class="fas fa-undo me-1"></i>Réinitialiser</button>
+                                        </div>
+                                        <div id="reportPreviewSummary" class="row g-2 mb-2" style="display:none;">
+                                            <div class="col-6"><div class="rounded p-2 text-center" style="background:#e8f4fd;"><div class="small text-muted">Transactions</div><div class="fw-bold text-primary" id="rptCount">0</div></div></div>
+                                            <div class="col-6"><div class="rounded p-2 text-center" style="background:#fff8e1;"><div class="small text-muted">Bénéfice net</div><div class="fw-bold" id="rptTotal">$0.00</div></div></div>
+                                            <div class="col-6"><div class="rounded p-2 text-center" style="background:#e6f9f0;"><div class="small text-muted">Revenus</div><div class="fw-bold text-success" id="rptIncome">$0.00</div></div></div>
+                                            <div class="col-6"><div class="rounded p-2 text-center" style="background:#fdecea;"><div class="small text-muted">Dépenses</div><div class="fw-bold text-danger" id="rptExpense">$0.00</div></div></div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -1730,7 +1738,26 @@
     }
 
     function applyReportFilters() {
-        // Rien à afficher, les filtres sont stockés pour l'export
+        const filtered = getReportFilteredTransactions();
+        const currency = settings[activeStore]?.currency || '€';
+        let income = 0, expense = 0;
+        filtered.forEach(t => {
+            if (t.type === 'income') income += t.amount;
+            else expense += t.amount;
+        });
+        const net = income - expense;
+        const panel = document.getElementById('reportPreviewSummary');
+        if (panel) {
+            panel.style.display = filtered.length > 0 ? '' : 'none';
+            document.getElementById('rptCount').textContent = filtered.length;
+            const netEl = document.getElementById('rptTotal');
+            if (netEl) {
+                netEl.textContent = `${currency}${net.toFixed(2)}`;
+                netEl.className = 'fw-bold ' + (net >= 0 ? 'text-success' : 'text-danger');
+            }
+            document.getElementById('rptIncome').textContent = `${currency}${income.toFixed(2)}`;
+            document.getElementById('rptExpense').textContent = `${currency}${expense.toFixed(2)}`;
+        }
     }
 
     function applyDataFilters() {
@@ -2052,6 +2079,11 @@
         summaryRows.push(['TOTAL GÉNÉRAL', totalIncome.toFixed(2), totalExpense.toFixed(2), (totalIncome - totalExpense).toFixed(2)]);
 
         let sections = [];
+        // Header summary rows at the top of the file
+        sections.push([`Rapport financier - ${settings[activeStore]?.storeName || activeStore}`]);
+        sections.push([`Généré le ${new Date().toLocaleDateString('fr-FR')}`]);
+        sections.push([`Transactions : ${transactionsList.length}`, `Revenus : ${totalIncome.toFixed(2)}`, `Dépenses : ${totalExpense.toFixed(2)}`, `Bénéfice net : ${(totalIncome - totalExpense).toFixed(2)}`]);
+        sections.push([]);
 
         if (reportType === 'tax') {
             const taxRate = settings[activeStore].taxRate / 100;
@@ -2101,7 +2133,13 @@
         doc.setFontSize(10);
         doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, 14, 28);
         doc.text(`Nombre de transactions : ${transactionsList.length}`, 14, 33);
-        let y = 40;
+        // Summary header box
+        const _hInc  = transactionsList.filter(t => t.type === 'income').reduce((s,t) => s + t.amount, 0);
+        const _hExp  = transactionsList.filter(t => t.type !== 'income').reduce((s,t) => s + t.amount, 0);
+        const _hNet  = _hInc - _hExp;
+        doc.setFontSize(9);
+        doc.text(`Revenus : ${currency}${_hInc.toFixed(2)}   |   Dépenses : ${currency}${_hExp.toFixed(2)}   |   Bénéfice net : ${currency}${_hNet.toFixed(2)}`, 14, 39);
+        let y = 46;
 
         // Build category summary (used in all report types)
         const summary = {};
