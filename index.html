@@ -2038,39 +2038,49 @@
     }
 
     function exportReportCSV(transactionsList, reportType, silent = false) {
-        let headers, rows;
-        if (reportType === 'financial_summary') {
-            headers = ['Catégorie', 'Revenus', 'Dépenses', 'Solde'];
-            const summary = {};
-            transactionsList.forEach(t => {
-                if (!summary[t.category]) summary[t.category] = { income: 0, expense: 0 };
-                if (t.type === 'income') summary[t.category].income += t.amount;
-                else summary[t.category].expense += t.amount;
-            });
-            rows = Object.entries(summary).map(([cat, val]) => [cat, val.income, val.expense, val.income - val.expense]);
-        } else if (reportType === 'tax') {
+        // Build category summary (always appended)
+        const summary = {};
+        let totalIncome = 0, totalExpense = 0;
+        transactionsList.forEach(t => {
+            if (!summary[t.category]) summary[t.category] = { income: 0, expense: 0 };
+            if (t.type === 'income') { summary[t.category].income += t.amount; totalIncome += t.amount; }
+            else                     { summary[t.category].expense += t.amount; totalExpense += t.amount; }
+        });
+        const summaryRows = Object.entries(summary).map(([cat, val]) => [
+            translateCategory(cat), val.income.toFixed(2), val.expense.toFixed(2), (val.income - val.expense).toFixed(2)
+        ]);
+        summaryRows.push(['TOTAL GÉNÉRAL', totalIncome.toFixed(2), totalExpense.toFixed(2), (totalIncome - totalExpense).toFixed(2)]);
+
+        let sections = [];
+
+        if (reportType === 'tax') {
             const taxRate = settings[activeStore].taxRate / 100;
-            let totalIncome = 0, totalExpense = 0;
-            transactionsList.forEach(t => {
-                if (t.type === 'income') totalIncome += t.amount;
-                else totalExpense += t.amount;
-            });
             const taxable = totalIncome - totalExpense;
             const tax = taxable * taxRate;
-            headers = ['Description', 'Montant'];
-            rows = [
-                ['Total des revenus', totalIncome],
-                ['Total des dépenses déductibles', totalExpense],
-                ['Base taxable', taxable],
-                [`Impôt (${settings[activeStore].taxRate}%)`, tax],
-                ['Net après impôt', taxable - tax]
-            ];
-        } else {
-            headers = ['Date', 'Type', 'Catégorie', 'Description', 'Montant'];
-            rows = transactionsList.map(t => [t.date, t.type === 'income' ? 'Revenu' : 'Dépense', translateCategory(t.category), t.description, t.amount]);
+            sections.push(['Description', 'Montant']);
+            sections.push(...[
+                ['Total des revenus', totalIncome.toFixed(2)],
+                ['Total des dépenses déductibles', totalExpense.toFixed(2)],
+                ['Base taxable', taxable.toFixed(2)],
+                [`Impôt (${settings[activeStore].taxRate}%)`, tax.toFixed(2)],
+                ['Net après impôt', (taxable - tax).toFixed(2)]
+            ]);
+        } else if (reportType === 'transactions') {
+            sections.push(['Date', 'Type', 'Catégorie', 'Description', 'Montant']);
+            sections.push(...transactionsList.map(t => [
+                t.date, t.type === 'income' ? 'Revenu' : 'Dépense', translateCategory(t.category), t.description, t.amount.toFixed(2)
+            ]));
+            sections.push([]); // blank separator
         }
-        const csvContent = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
+
+        // Always append summary
+        sections.push([]);
+        sections.push(['--- RÉSUMÉ PAR CATÉGORIE ---']);
+        sections.push(['Catégorie', 'Revenus', 'Dépenses', 'Solde']);
+        sections.push(...summaryRows);
+
+        const csvContent = sections.map(r => r.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `rapport_${activeStore}_${new Date().toISOString().slice(0,10)}.csv`;
