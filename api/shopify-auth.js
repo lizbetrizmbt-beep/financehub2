@@ -7,7 +7,7 @@ export default function handler(req, res) {
     if (!clientId) return res.status(500).json({ error: 'SHOPIFY_CLIENT_ID non configuré' });
 
     const redirectUri = 'https://financehub2-red.vercel.app/api/shopify-callback';
-    const scopes = 'read_orders,read_customers';
+    const scopes = 'read_orders';
     const state = Buffer.from(Date.now().toString()).toString('base64');
 
     const url = `https://${shopDomain}/admin/oauth/authorize?client_id=${encodeURIComponent(clientId)}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
